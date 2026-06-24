@@ -34,10 +34,12 @@ def check_guess(guess, secret):
         return "Win", "🎉 Correct!"
 
     try:
+    
+    #Fix: Swapped HIGHER and LOWER messages to match the correct logic for the game
         if guess > secret:
-            return "Too High", "📈 Go HIGHER!"
+            return "Too High", "📉 Go LOWER!"
         else:
-            return "Too Low", "📉 Go LOWER!"
+            return "Too Low", "📈 Go HIGHER!"
     except TypeError:
         g = str(guess)
         if g == secret:
@@ -89,6 +91,16 @@ low, high = get_range_for_difficulty(difficulty)
 st.sidebar.caption(f"Range: {low} to {high}")
 st.sidebar.caption(f"Attempts allowed: {attempt_limit}")
 
+#Fix: Added a check to reset the game state when the difficulty changes, ensuring that the secret number and attempts 
+#are reset appropriately for the new difficulty level.
+if "difficulty" not in st.session_state or st.session_state.difficulty != difficulty:
+    st.session_state.difficulty = difficulty
+    st.session_state.secret = random.randint(low, high)
+    st.session_state.attempts = 0
+    st.session_state.status = "playing"
+    st.session_state.score = 0
+    st.session_state.history = []
+
 if "secret" not in st.session_state:
     st.session_state.secret = random.randint(low, high)
 
@@ -107,7 +119,9 @@ if "history" not in st.session_state:
 st.subheader("Make a guess")
 
 st.info(
-    f"Guess a number between 1 and 100. "
+    #Fix: used low-high variables from get_range_for_difficulty instead of hardcoded values
+    #in order to make the game work properly with different difficulties
+    f"Guess a number between {low} and {high}. "
     f"Attempts left: {attempt_limit - st.session_state.attempts}"
 )
 
@@ -133,15 +147,36 @@ with col3:
 
 if new_game:
     st.session_state.attempts = 0
-    st.session_state.secret = random.randint(1, 100)
+
+    #FIX: Used a new game button where low and high are used from get_range_for_difficulty
+    st.session_state.secret = random.randint(low, high)
+
+    #Fix : Added more code for resetting the game state when starting a new game
+    st.session_state.status = "playing"
+    st.session_state.score = 0
+    st.session_state.history = []
+
     st.success("New game started.")
     st.rerun()
 
 if st.session_state.status != "playing":
+    #Fix: Update the statuc check to display the correct message when the game 
+    # is won or lost, and show the final score and secret number.
     if st.session_state.status == "won":
-        st.success("You already won. Start a new game to play again.")
+        st.balloons()
+        st.success(
+            f"You won! The secret was {st.session_state.secret}. "
+            f"Final score: {st.session_state.score}"
+        )
+        st.success("Start a new game to play again.")
     else:
-        st.error("Game over. Start a new game to try again.")
+        #Fix : Updated the message to display the correct secret number and 
+        # score when the game is lost.
+        st.error(
+            f"Out of attempts! The secret was {st.session_state.secret}. "
+            f"Score: {st.session_state.score}"
+        )
+        st.error("Start a new game to try again.")
     st.stop()
 
 if submit:
@@ -155,12 +190,9 @@ if submit:
     else:
         st.session_state.history.append(guess_int)
 
-        if st.session_state.attempts % 2 == 0:
-            secret = str(st.session_state.secret)
-        else:
-            secret = st.session_state.secret
-
-        outcome, message = check_guess(guess_int, secret)
+        #Fix: Removed 5 lines and added this code to use the check_guess 
+        # function to determine the outcome and message for the guess
+        outcome, message = check_guess(guess_int, st.session_state.secret)
 
         if show_hint:
             st.warning(message)
@@ -172,20 +204,16 @@ if submit:
         )
 
         if outcome == "Win":
-            st.balloons()
             st.session_state.status = "won"
-            st.success(
-                f"You won! The secret was {st.session_state.secret}. "
-                f"Final score: {st.session_state.score}"
-            )
+            #Fix: Updated the status check to display the correct message 
+            # when the game is won or lost, and show the final score and secret number.
+            st.rerun()
         else:
             if st.session_state.attempts >= attempt_limit:
                 st.session_state.status = "lost"
-                st.error(
-                    f"Out of attempts! "
-                    f"The secret was {st.session_state.secret}. "
-                    f"Score: {st.session_state.score}"
-                )
+                #Fix: Updated the status check to display the correct message
+                #  when the game is won or lost, and show the final score and secret number.
+                st.rerun()
 
 st.divider()
 st.caption("Built by an AI that claims this code is production-ready.")
